@@ -3,13 +3,13 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.fetchers import (
+from ..database import get_db
+from ..fetchers import (
     receipt_fetcher, delivery_fetcher, transfer_fetcher,
     adjustment_fetcher, product_fetcher
 )
-from app.models import Receipt, Delivery, Transfer, Adjustment, MoveHistory, Product
-from app.schemas import (
+from ..models import Receipt, Delivery, Transfer, Adjustment, MoveHistory, Product
+from ..schemas import (
     ReceiptSchema, ReceiptOut,
     DeliverySchema, DeliveryOut,
     TransferSchema, TransferOut,

@@ -1,16 +1,19 @@
 // src/pages/SignUp.jsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { authService } from '../services/authService'
 
 function SignUp() {
   const [loginId, setLoginId] = useState('')
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
@@ -19,15 +22,37 @@ function SignUp() {
       return
     }
 
-    console.log('Sign Up:', { loginId, email, password })
-    // TODO: connect to backend signup API
-    navigate('/login')
+    setIsSubmitting(true)
+    try {
+      await authService.register({
+        username: loginId.trim(),
+        email: email.trim(),
+        password,
+        fullName: fullName.trim(),
+      })
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <div style={styles.container}>
       <form style={styles.card} onSubmit={handleSubmit}>
         <h2 style={styles.title}>Sign Up</h2>
+
+        <label style={styles.label}>Full Name</label>
+        <input
+          type="text"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          style={styles.input}
+          placeholder="Enter your full name"
+          minLength={2}
+          required
+        />
 
         <label style={styles.label}>Enter Login Id</label>
         <input
@@ -56,6 +81,7 @@ function SignUp() {
           onChange={(e) => setPassword(e.target.value)}
           style={styles.input}
           placeholder="Enter Password"
+          minLength={8}
           required
         />
 
@@ -71,8 +97,8 @@ function SignUp() {
 
         {error && <p style={styles.errorText}>{error}</p>}
 
-        <button type="submit" style={styles.button}>
-          Sign Up
+        <button type="submit" style={styles.button} disabled={isSubmitting}>
+          {isSubmitting ? 'Creating account...' : 'Sign Up'}
         </button>
 
         <p style={styles.footerText}>

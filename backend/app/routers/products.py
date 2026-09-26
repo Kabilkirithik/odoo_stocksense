@@ -1,10 +1,10 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.fetchers import product_fetcher
-from app.models import Product
-from app.schemas import ProductSchema, ProductUpdate, ProductOut
+from ..database import get_db
+from ..fetchers import product_fetcher
+from ..models import Product
+from ..schemas import ProductSchema, ProductUpdate, ProductOut
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
 

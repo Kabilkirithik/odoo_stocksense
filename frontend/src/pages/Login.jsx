@@ -1,23 +1,37 @@
 // src/pages/Login.jsx
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { authService } from '../services/authService'
 
 function Login() {
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const location = useLocation()
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log('Login ID:', loginId, 'Password:', password)
-    // TODO: connect to backend auth API
-    navigate('/dashboard')
+    setError('')
+    setIsSubmitting(true)
+
+    try {
+      await authService.login(loginId.trim(), password)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <div style={styles.container}>
       <form style={styles.card} onSubmit={handleSubmit}>
         <h2 style={styles.title}>Login</h2>
+        {location.state?.message && <p style={styles.successText}>{location.state.message}</p>}
+        {error && <p role="alert" style={styles.errorText}>{error}</p>}
 
         <label style={styles.label}>Login Id</label>
         <input
@@ -39,12 +53,15 @@ function Login() {
           required
         />
 
-        <button type="submit" style={styles.button}>
-          Sign In
+        <button type="submit" style={styles.button} disabled={isSubmitting}>
+          {isSubmitting ? 'Signing in...' : 'Sign In'}
         </button>
 
         <p style={styles.forgotText}>
-          Forgot Password? <span style={styles.link}>Click here</span>
+          Forgot Password?{' '}
+          <button type="button" style={styles.textLink} onClick={() => navigate('/forgot-password')}>
+            Click here
+          </button>
         </p>
 
         <p style={styles.footerText}>
@@ -99,6 +116,8 @@ const styles = {
     marginTop: '15px',
     fontSize: '13px',
   },
+  errorText: { color: '#dc2626', fontSize: '13px', margin: '0 0 12px' },
+  successText: { color: '#15803d', fontSize: '13px', margin: '0 0 12px' },
   footerText: {
     textAlign: 'center',
     marginTop: '8px',
@@ -106,6 +125,14 @@ const styles = {
   },
   link: {
     color: '#2563eb',
+    cursor: 'pointer',
+  },
+  textLink: {
+    color: '#2563eb',
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    font: 'inherit',
     cursor: 'pointer',
   },
 }

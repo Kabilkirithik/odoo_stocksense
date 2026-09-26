@@ -1,9 +1,9 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.fetchers import move_fetcher
-from app.schemas import MoveHistoryOut
+from ..database import get_db
+from ..fetchers import move_fetcher
+from ..schemas import MoveHistoryOut
 
 router = APIRouter(prefix="/api/moves", tags=["Move History"])
 
