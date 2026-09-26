@@ -3,3 +3,17 @@ README.md
 .env
 __pycache__/
 .DS_Store
+# Environment
+.env
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
