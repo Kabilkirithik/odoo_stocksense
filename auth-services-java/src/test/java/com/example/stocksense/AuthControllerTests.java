@@ -1,21 +1,10 @@
 package com.example.stocksense;
 
-import com.example.stocksense.dto.LoginRequest;
-import com.example.stocksense.dto.RegisterRequest;
-import com.example.stocksense.entity.PasswordResetOtp;
-import com.example.stocksense.entity.User;
-import com.example.stocksense.repository.PasswordResetOtpRepository;
-import com.example.stocksense.repository.UserRepository;
-import com.example.stocksense.security.JwtService;
-import com.example.stocksense.service.AuthService;
-import com.example.stocksense.service.OtpService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpServletRequest;
-
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,22 +18,18 @@ class AuthControllerTests {
     private OtpService otpService;
 
     @Autowired
-    private JwtService jwtService;
+    private InMemoryOtpStore otpStore;
+
+    @Autowired
+    private JwtTokenService jwtService;
 
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private PasswordResetOtpRepository otpRepository;
-
-    @Autowired
-    private com.example.stocksense.repository.RefreshTokenRepository refreshTokenRepository;
-
     @BeforeEach
     void setUp() {
-        otpRepository.deleteAll();
-        refreshTokenRepository.deleteAll();
         userRepository.deleteAll();
+        otpStore.clear();
     }
 
     @Test
@@ -60,29 +45,28 @@ class AuthControllerTests {
         );
 
         var regResponse = authService.register(registerReq, request);
-        assertNotNull(regResponse.getAccessToken());
-        assertNotNull(regResponse.getRefreshToken());
+        assertNotNull(regResponse.getToken());
         assertEquals("manager@stocksense.com", regResponse.getUser().getEmail());
 
         // 2. Validate JWT token
-        assertTrue(jwtService.validateToken(regResponse.getAccessToken()));
-        assertEquals("stockmanager", jwtService.getUsernameFromToken(regResponse.getAccessToken()));
+        assertTrue(jwtService.validateToken(regResponse.getToken()));
+        assertEquals("stockmanager", jwtService.getUsernameFromToken(regResponse.getToken()));
 
         // 3. Login
         LoginRequest loginReq = new LoginRequest("stockmanager", "P@ssword123!");
         var loginResponse = authService.login(loginReq, request);
-        assertNotNull(loginResponse.getAccessToken());
+        assertNotNull(loginResponse.getToken());
         assertEquals("manager@stocksense.com", loginResponse.getUser().getEmail());
 
         // 4. Validate Token for Python Backend
-        var validation = authService.validateTokenForBackend(loginResponse.getAccessToken());
+        var validation = authService.validateTokenForBackend(loginResponse.getToken());
         assertTrue(validation.isValid());
         assertEquals("stockmanager", validation.getUsername());
         assertEquals("manager@stocksense.com", validation.getEmail());
     }
 
     @Test
-    void testOtpPasswordResetFlow() {
+    void testInMemoryOtpPasswordResetFlow() {
         MockHttpServletRequest request = new MockHttpServletRequest();
 
         // Register user
@@ -94,17 +78,43 @@ class AuthControllerTests {
         );
         authService.register(registerReq, request);
 
-        // Request OTP
+        // Request OTP (stored in memory)
         otpService.generateAndSendOtp("staff@stocksense.com", request);
 
-        User user = userRepository.findByEmail("staff@stocksense.com").orElseThrow();
-        PasswordResetOtp otp = otpRepository.findTopByUserOrderByCreatedAtDesc(user).orElseThrow();
-        assertNotNull(otp.getOtpHash());
-        assertFalse(otp.isExpired());
+        // In-memory OTP session exists
+        var session = otpStore.getOtp("staff@stocksense.com");
+        assertNotNull(session);
+        assertNotNull(session.getOtpHash());
+        assertFalse(session.isExpired());
 
-        // Verify with invalid OTP first
+        // Cooldown protection test: consecutive request within cooldown throws IllegalStateException
+        assertThrows(IllegalStateException.class, () -> {
+            otpService.generateAndSendOtp("staff@stocksense.com", request);
+        });
+
+        // Verification with invalid OTP fails
         assertThrows(IllegalArgumentException.class, () -> {
             otpService.verifyOtp("staff@stocksense.com", "000000");
         });
+    }
+
+    @Test
+    void testRestartSnapshotSurvivability() {
+        // Populate cache
+        otpStore.saveOtp("test@stocksense.com", "dummy_hash", java.time.Instant.now().plusSeconds(300));
+        assertNotNull(otpStore.getOtp("test@stocksense.com"));
+
+        // Trigger shutdown persistence
+        otpStore.persistStateOnShutdown();
+
+        // Clear in-memory state
+        otpStore.removeOtp("test@stocksense.com");
+        assertNull(otpStore.getOtp("test@stocksense.com"));
+
+        // Trigger startup restoration
+        otpStore.restoreStateOnStartup();
+
+        // Verify active OTP survived!
+        assertNotNull(otpStore.getOtp("test@stocksense.com"));
     }
 }
