@@ -180,3 +180,4 @@ Created SQLAlchemy models in `app/models.py` for all 8 database tables:
         - Internal Transfers: 80 seeded
         - Stock Adjustments: 50 seeded
         - Stock Ledger (Move History): 370 seeded
+
