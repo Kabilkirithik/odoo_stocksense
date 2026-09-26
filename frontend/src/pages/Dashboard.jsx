@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import DashboardChatbot from '../components/DashboardChatbot'
 import { api } from '../api'
 
 function Dashboard() {
@@ -19,6 +20,7 @@ function Dashboard() {
   return (
     <div style={styles.page}>
       <Navbar />
+      <DashboardChatbot />
 
       <div style={styles.content}>
         <h2 style={styles.title}>Dashboard</h2>
