@@ -21,3 +21,16 @@ The core workflow follows a real warehouse process:
 5. Every operation is recorded in a stock ledger for traceability.
 
 The goal is to create an inventory system that feels production-ready—not just in functionality, but also in architecture, monitoring, and deployment.
+
+# Folder Structure
+
+stocksense/
+│
+├── frontend/
+├── backend/
+├── monitoring/
+├── docs/
+│
+├── .env.example
+├── .gitignore
+└── README.md
