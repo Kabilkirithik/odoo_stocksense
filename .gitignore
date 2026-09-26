@@ -1,14 +1,40 @@
-README.md
 .env
 !.env.example
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .venv/
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Node / Frontend
+node_modules/
+dist/
+.next/
+out/
+.turbo/
 
 # IDE & OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Executables & Archives
+*.exe
+*.zip
+*.tar.gz
+
+backend/monitoring/prometheus/**
+!backend/monitoring/prometheus/
+!backend/monitoring/prometheus/prometheus.yml
+
+backend/monitoring/grafana/**
+!backend/monitoring/grafana/
+!backend/monitoring/grafana/dashboards/
+!backend/monitoring/grafana/dashboards/**
