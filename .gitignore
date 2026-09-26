@@ -1,1 +1,14 @@
-README.md
+# Environment
+.env
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
