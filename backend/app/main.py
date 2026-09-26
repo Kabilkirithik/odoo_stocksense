@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers.dashboard import router as dashboard_router
-from app.routers.products import router as products_router
-from app.routers.warehouses import router as warehouses_router
-from app.routers.operations import router as operations_router
-from app.routers.moves import router as moves_router
+from .database import Base, engine
+from .routers.dashboard import router as dashboard_router
+from .routers.products import router as products_router
+from .routers.warehouses import router as warehouses_router
+from .routers.operations import router as operations_router
+from .routers.moves import router as moves_router
 
 app = FastAPI(
     title="StockSense Inventory API",
@@ -21,11 +22,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.on_event("startup")
+def startup_event():
+    Base.metadata.create_all(bind=engine)
+
+
 app.include_router(dashboard_router)
 app.include_router(products_router)
 app.include_router(warehouses_router)
 app.include_router(operations_router)
 app.include_router(moves_router)
+
 
 @app.get("/")
 def root():

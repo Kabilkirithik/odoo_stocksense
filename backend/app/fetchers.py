@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar, Type, List, Optional, Any, Dict
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc, asc
-from app.models import Product, Receipt, Delivery, Transfer, Adjustment, MoveHistory, Warehouse
+from .models import Product, Receipt, Delivery, Transfer, Adjustment, MoveHistory, Warehouse
 
 
 # this file contains the fetching logic for all the tables and it is implented using polymorphism where the same function is used multiple times in multiple formats

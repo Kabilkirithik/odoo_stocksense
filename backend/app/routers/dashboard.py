@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.fetchers import dashboard_fetcher, move_fetcher, product_fetcher
-from app.schemas import DashboardKPIOut
+from ..database import get_db
+from ..fetchers import dashboard_fetcher, move_fetcher, product_fetcher
+from ..schemas import DashboardKPIOut
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
 
