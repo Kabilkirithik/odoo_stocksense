@@ -9,3 +9,7 @@ target/
 .DS_Store
 python-integration/__pycache__/
 frontend-integration/node_modules/
+.env
+.env.*
+!.env.example
+

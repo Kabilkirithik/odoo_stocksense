@@ -66,16 +66,18 @@ def make_request(method: str, endpoint: str, payload: dict = None, token: str = 
 
 def extract_otp_from_log(email: str) -> str:
     """Reads the latest OTP dispatched to the specified email from service logs."""
-    try:
-        with open(LOG_FILE, "r") as f:
-            content = f.read()
-        # Find all occurrences of OTP notifications
-        pattern = re.compile(rf"\[EMAIL OTP NOTIFICATION\] To: {re.escape(email)}[\s\S]*?Your StockSense verification code is: (\d{{6}})")
-        matches = pattern.findall(content)
-        if matches:
-            return matches[-1]
-    except Exception as e:
-        print(f"Warning: could not read OTP log: {e}")
+    import glob
+    log_files = sorted(glob.glob("/Users/kabil/.gemini/antigravity-ide/brain/6f192dc9-0fc4-458f-a468-176df491964d/.system_generated/tasks/*.log"), reverse=True)
+    pattern = re.compile(rf"\[EMAIL OTP NOTIFICATION\] To: {re.escape(email)}[\s\S]*?Your StockSense verification code is: (\d{{6}})")
+    for log_path in log_files:
+        try:
+            with open(log_path, "r", errors="ignore") as f:
+                content = f.read()
+            matches = pattern.findall(content)
+            if matches:
+                return matches[-1]
+        except Exception:
+            continue
     return None
 
 

@@ -1,6 +1,6 @@
 -- ===================================================================
 -- StockSense Authentication Service - PostgreSQL DDL Schema
--- Database: PostgreSQL (35.206.93.73:5433)
+-- Database: PostgreSQL
 -- Architecture: Ultra-lean Single-Table Architecture
 -- ===================================================================
 
