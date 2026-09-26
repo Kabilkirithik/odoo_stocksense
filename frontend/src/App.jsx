@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
 import Login from './pages/Login'
 import SignUp from './pages/SignUp'
+import PasswordReset from './pages/PasswordReset'
 import Dashboard from './pages/Dashboard'
 import Stock from './pages/Stock'
 import Receipts from './pages/Receipts'
@@ -20,6 +21,7 @@ function App() {
         {/* Auth */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/forgot-password" element={<PasswordReset />} />
 
         {/* Core app */}
         <Route path="/dashboard" element={<Dashboard />} />

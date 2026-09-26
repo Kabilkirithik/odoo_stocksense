@@ -69,6 +69,15 @@ function Dashboard() {
             </div>
           </div>
         )}
+
+        <section style={styles.monitoring}>
+          <h2 style={styles.monitoringTitle}>Production Monitoring</h2>
+          <iframe
+            src="http://localhost:3000/d/stocksense-dash/stocksense-production-monitoring?kiosk"
+            title="StockSense Monitoring"
+            style={styles.monitoringFrame}
+          />
+        </section>
       </div>
     </div>
   )
@@ -81,6 +90,17 @@ const styles = {
   loading: { color: '#888', fontSize: '14px' },
   error: { color: '#dc2626', fontSize: '14px', marginBottom: '15px' },
   cardRow: { display: 'flex', gap: '20px', flexWrap: 'wrap' },
+  monitoring: { marginTop: '32px', width: '100%' },
+  monitoringTitle: { marginBottom: '16px' },
+  monitoringFrame: {
+    display: 'block',
+    width: '100%',
+    height: '70vh',
+    minHeight: '420px',
+    border: 'none',
+    borderRadius: '8px',
+    backgroundColor: '#fff',
+  },
   card: {
     backgroundColor: '#fff',
     border: '1px solid #ddd',
