@@ -1,56 +1,171 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { api } from '../api'
 
 function ReceiptDetail() {
-  const [status, setStatus] = useState('Draft')
-  const [products, setProducts] = useState([{ id: 1, code: 'DESK001', name: 'Desk', quantity: 6 }])
-  const loggedInUser = 'Admin'
+  const { id } = useParams()
+  const navigate = useNavigate()
 
-  const handleQuantityChange = (id, value) => {
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, quantity: Number(value) } : p)))
-  }
+  const [receipt, setReceipt] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
 
-  const addProduct = () => {
-    setProducts((prev) => [...prev, { id: prev.length + 1, code: '', name: '', quantity: 0 }])
-  }
-
-  const handleValidate = () => {
-    if (status === 'Draft') setStatus('Ready')
-    else if (status === 'Ready') setStatus('Done')
-  }
+  const loggedInUser = 'Admin' // TODO: replace with real logged-in user later
 
   const statusSteps = ['Draft', 'Ready', 'Done']
+
+  useEffect(() => {
+    if (!id || id === 'new') {
+      setLoading(false)
+      return
+    }
+    api
+      .get(`/api/operations/receipts/${id}`)
+      .then((data) => {
+        setReceipt(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [id])
+
+  const handleValidate = async () => {
+    setActionLoading(true)
+    setError('')
+    try {
+      if (receipt.status === 'Draft') {
+        await api.post(`/api/operations/receipts/${id}/ready`)
+      } else if (receipt.status === 'Ready') {
+        await api.post(`/api/operations/receipts/${id}/validate`)
+      }
+      const updated = await api.get(`/api/operations/receipts/${id}`)
+      setReceipt(updated)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleCancel = async () => {
+    setActionLoading(true)
+    setError('')
+    try {
+      await api.post(`/api/operations/receipts/${id}/cancel`)
+      const updated = await api.get(`/api/operations/receipts/${id}`)
+      setReceipt(updated)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handlePrint = async () => {
+    try {
+      const blob = await api.getBlob(`/api/operations/receipts/${id}/slip`)
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    } catch (err) {
+      alert('Failed to load print slip: ' + err.message)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={styles.page}>
+        <Navbar />
+        <div style={styles.content}>
+          <p style={styles.loading}>Loading receipt...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !receipt) {
+    return (
+      <div style={styles.page}>
+        <Navbar />
+        <div style={styles.content}>
+          <p style={styles.error}>Failed to load receipt: {error}</p>
+          <button style={styles.secondaryButton} onClick={() => navigate('/receipts')}>
+            Back to Receipts
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!receipt) {
+    return (
+      <div style={styles.page}>
+        <Navbar />
+        <div style={styles.content}>
+          <p style={styles.error}>No receipt found for this ID.</p>
+          <button style={styles.secondaryButton} onClick={() => navigate('/receipts')}>
+            Back to Receipts
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={styles.page}>
       <Navbar />
       <div style={styles.content}>
+        {error && <p style={styles.error}>{error}</p>}
+
         <div style={styles.actionBar}>
           <div>
-            <button style={styles.validateButton} onClick={handleValidate} disabled={status === 'Done'}>Validate</button>
-            <button style={styles.secondaryButton}>Print</button>
-            <button style={styles.secondaryButton}>Cancel</button>
+            <button
+              style={{ ...styles.validateButton, ...(receipt.status === 'Done' || actionLoading ? styles.disabledButton : {}) }}
+              onClick={handleValidate}
+              disabled={receipt.status === 'Done' || actionLoading}
+            >
+              Validate
+            </button>
+            <button style={styles.secondaryButton} onClick={handlePrint}>Print</button>
+            <button
+              style={styles.secondaryButton}
+              onClick={handleCancel}
+              disabled={actionLoading || receipt.status === 'Done' || receipt.status === 'Cancelled'}
+            >
+              Cancel
+            </button>
           </div>
+
           <div style={styles.statusBar}>
             {statusSteps.map((step, idx) => (
               <span key={step} style={styles.statusStepWrapper}>
-                <span style={{ ...styles.statusStep, ...(step === status ? styles.statusStepActive : {}) }}>{step}</span>
+                <span
+                  style={{
+                    ...styles.statusStep,
+                    ...(step === receipt.status ? styles.statusStepActive : {}),
+                  }}
+                >
+                  {step}
+                </span>
                 {idx < statusSteps.length - 1 && <span style={styles.arrow}>›</span>}
               </span>
             ))}
           </div>
         </div>
 
-        <h2 style={styles.title}>WH/IN/0001</h2>
+        <h2 style={styles.title}>{receipt.receipt_id}</h2>
 
         <div style={styles.fieldRow}>
           <div style={styles.field}>
             <label style={styles.label}>Receive From</label>
-            <input style={styles.input} placeholder="Vendor name" />
+            <input style={styles.input} value={receipt.supplier_id || ''} readOnly />
           </div>
           <div style={styles.field}>
             <label style={styles.label}>Schedule Date</label>
-            <input style={styles.input} type="date" />
+            <input style={styles.input} value={receipt.receipt_date || ''} readOnly />
           </div>
         </div>
 
@@ -64,21 +179,18 @@ function ReceiptDetail() {
         <h3 style={styles.subTitle}>Products</h3>
         <table style={styles.table}>
           <thead>
-            <tr><th style={styles.th}>Product</th><th style={styles.th}>Quantity</th></tr>
+            <tr>
+              <th style={styles.th}>Product</th>
+              <th style={styles.th}>Quantity</th>
+            </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
-              <tr key={p.id}>
-                <td style={styles.td}>[{p.code}] {p.name}</td>
-                <td style={styles.td}>
-                  <input style={styles.qtyInput} type="number" value={p.quantity} onChange={(e) => handleQuantityChange(p.id, e.target.value)} />
-                </td>
-              </tr>
-            ))}
+            <tr>
+              <td style={styles.td}>{receipt.product_id}</td>
+              <td style={styles.td}>{receipt.quantity_received}</td>
+            </tr>
           </tbody>
         </table>
-
-        <button style={styles.addProductButton} onClick={addProduct}>+ New Product</button>
       </div>
     </div>
   )
@@ -87,9 +199,37 @@ function ReceiptDetail() {
 const styles = {
   page: { minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'Arial, sans-serif' },
   content: { padding: '30px', maxWidth: '800px' },
+  loading: { color: '#888', fontSize: '14px' },
+  error: {
+    color: '#dc2626',
+    fontSize: '13px',
+    marginBottom: '15px',
+    backgroundColor: '#fee2e2',
+    padding: '10px',
+    borderRadius: '6px',
+  },
   actionBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-  validateButton: { padding: '8px 16px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', marginRight: '8px' },
-  secondaryButton: { padding: '8px 16px', backgroundColor: '#fff', color: '#333', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', marginRight: '8px' },
+  validateButton: {
+    padding: '8px 16px',
+    backgroundColor: '#2563eb',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginRight: '8px',
+  },
+  disabledButton: { backgroundColor: '#ccc', cursor: 'not-allowed' },
+  secondaryButton: {
+    padding: '8px 16px',
+    backgroundColor: '#fff',
+    color: '#333',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginRight: '8px',
+  },
   statusBar: { display: 'flex', alignItems: 'center', gap: '6px' },
   statusStepWrapper: { display: 'flex', alignItems: 'center', gap: '6px' },
   statusStep: { fontSize: '13px', color: '#999', padding: '4px 10px', border: '1px solid #ddd', borderRadius: '12px' },
@@ -99,13 +239,11 @@ const styles = {
   fieldRow: { display: 'flex', gap: '30px', marginBottom: '15px' },
   field: { display: 'flex', flexDirection: 'column', flex: 1 },
   label: { fontSize: '13px', color: '#555', marginBottom: '4px' },
-  input: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' },
+  input: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px', backgroundColor: '#fff' },
   subTitle: { marginTop: '25px', marginBottom: '10px' },
   table: { width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', border: '1px solid #ddd' },
   th: { textAlign: 'left', padding: '10px', borderBottom: '2px solid #ddd', fontSize: '14px', backgroundColor: '#fafafa' },
   td: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '14px' },
-  qtyInput: { width: '60px', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' },
-  addProductButton: { marginTop: '10px', padding: '6px 12px', backgroundColor: '#fff', border: '1px dashed #999', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#555' },
 }
 
-export default ReceiptDetail    
+export default ReceiptDetail
