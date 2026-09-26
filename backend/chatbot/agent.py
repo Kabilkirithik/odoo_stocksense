@@ -81,24 +81,6 @@ ACTION_TOOLS = {
     "create_stock_adjustment"
 }
 
-def format_action_summary(tool_name: str, args: Dict[str, Any]) -> str:
-    if tool_name == "create_product":
-        name = args.get("product_name", "Unknown Item")
-        price = args.get("unit_price", 0.0)
-        stock = args.get("stock_quantity", 0)
-        return f"Create product '{name}' (Initial Stock: {stock}, Price: ${price:.2f})"
-    elif tool_name == "create_receipt":
-        return f"Create inbound receipt for {args.get('quantity_received', 0)} units of SKU '{args.get('product_id')}'"
-    elif tool_name == "validate_receipt":
-        return f"Validate inbound receipt '{args.get('receipt_id')}' and add stock to inventory"
-    elif tool_name == "create_delivery":
-        return f"Create outbound delivery of {args.get('quantity_delivered', 0)} units of SKU '{args.get('product_id')}' to '{args.get('customer_name', 'Customer')}'"
-    elif tool_name == "validate_delivery":
-        return f"Validate outbound delivery '{args.get('delivery_id')}' and decrement stock"
-    elif tool_name == "create_stock_adjustment":
-        return f"Adjust physical stock for SKU '{args.get('product_id')}' to {args.get('counted_quantity', 0)} units"
-    return f"Execute operation: {tool_name}"
-
 
 def create_inventory_tools(db: Session, confirmation_granted: bool = False):
     """Factory creating LangChain tools bound to the active request DB session."""
@@ -176,7 +158,7 @@ def create_inventory_tools(db: Session, confirmation_granted: bool = False):
             "reorder_quantity": reorder_quantity, "warehouse_name": warehouse_name, "rack_location": rack_location
         }
         if not confirmation_granted:
-            summary = format_action_summary("create_product", args)
+            summary = f"Create product '{product_name}' (Stock: {stock_quantity}, Price: ${unit_price:.2f})"
             return json.dumps({"status": "confirmation_required", "tool": "create_product", "arguments": args, "summary": summary})
 
         pid = product_id or _gen_id("SKU")
@@ -211,7 +193,7 @@ def create_inventory_tools(db: Session, confirmation_granted: bool = False):
         """Action: Register an inbound purchase receipt in Draft status. Requires confirmation before execution."""
         args = {"product_id": product_id, "quantity_received": quantity_received, "supplier_id": supplier_id}
         if not confirmation_granted:
-            summary = format_action_summary("create_receipt", args)
+            summary = f"Create inbound receipt for {quantity_received} units of SKU '{product_id}'"
             return json.dumps({"status": "confirmation_required", "tool": "create_receipt", "arguments": args, "summary": summary})
 
         receipt = Receipt(
@@ -228,7 +210,7 @@ def create_inventory_tools(db: Session, confirmation_granted: bool = False):
         """Action: Validate and complete incoming receipt, incrementing physical stock. Requires confirmation."""
         args = {"receipt_id": receipt_id}
         if not confirmation_granted:
-            summary = format_action_summary("validate_receipt", args)
+            summary = f"Validate inbound receipt '{receipt_id}'"
             return json.dumps({"status": "confirmation_required", "tool": "validate_receipt", "arguments": args, "summary": summary})
 
         receipt = db.query(Receipt).filter(Receipt.receipt_id == receipt_id).first()
@@ -257,7 +239,7 @@ def create_inventory_tools(db: Session, confirmation_granted: bool = False):
         """Action: Create an outbound delivery order in Draft status. Requires confirmation."""
         args = {"product_id": product_id, "quantity_delivered": quantity_delivered, "customer_name": customer_name}
         if not confirmation_granted:
-            summary = format_action_summary("create_delivery", args)
+            summary = f"Create outbound delivery of {quantity_delivered} units of SKU '{product_id}' to '{customer_name}'"
             return json.dumps({"status": "confirmation_required", "tool": "create_delivery", "arguments": args, "summary": summary})
 
         delivery = Delivery(
@@ -274,7 +256,7 @@ def create_inventory_tools(db: Session, confirmation_granted: bool = False):
         """Action: Validate outbound delivery, decrementing physical stock and creating movement record. Requires confirmation."""
         args = {"delivery_id": delivery_id}
         if not confirmation_granted:
-            summary = format_action_summary("validate_delivery", args)
+            summary = f"Validate outbound delivery '{delivery_id}'"
             return json.dumps({"status": "confirmation_required", "tool": "validate_delivery", "arguments": args, "summary": summary})
 
         delivery = db.query(Delivery).filter(Delivery.delivery_id == delivery_id).first()
@@ -306,7 +288,7 @@ def create_inventory_tools(db: Session, confirmation_granted: bool = False):
         """Action: Adjust physical inventory count and record variance in ledger. Requires confirmation."""
         args = {"product_id": product_id, "counted_quantity": counted_quantity, "reason": reason}
         if not confirmation_granted:
-            summary = format_action_summary("create_stock_adjustment", args)
+            summary = f"Adjust physical stock for SKU '{product_id}' to {counted_quantity} units"
             return json.dumps({"status": "confirmation_required", "tool": "create_stock_adjustment", "arguments": args, "summary": summary})
 
         p = product_fetcher.fetch_by_sku(db, product_id)
@@ -431,7 +413,7 @@ def build_inventory_graph(tools_list: list, llm):
                             "action_id": f"act_{uuid.uuid4().hex[:8]}",
                             "tool": t_name,
                             "arguments": t_args,
-                            "summary": parsed.get("summary", format_action_summary(t_name, t_args))
+                            "summary": parsed.get("summary") or f"Execute {t_name.replace('_', ' ').title()}"
                         }
                         instruction_msg = json.dumps({
                             "status": "staged_pending_confirmation",

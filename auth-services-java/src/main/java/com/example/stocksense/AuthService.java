@@ -2,10 +2,14 @@ package com.example.stocksense;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
@@ -409,9 +413,13 @@ class OtpService {
     private final PasswordEncoder passwordEncoder;
     private final RateLimiter rateLimiter;
     private final AuthService authService;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final int otpValidityMinutes;
     private final int maxOtpAttempts;
     private final int resendCooldownSeconds;
+    private final String mailHost;
+    private final String mailFrom;
+    private final String mailFromName;
 
     public OtpService(
             UserRepository userRepository,
@@ -419,17 +427,25 @@ class OtpService {
             PasswordEncoder passwordEncoder,
             RateLimiter rateLimiter,
             AuthService authService,
+            ObjectProvider<JavaMailSender> mailSenderProvider,
             @Value("${app.otp.validity-minutes:5}") int otpValidityMinutes,
             @Value("${app.otp.max-attempts:3}") int maxOtpAttempts,
-            @Value("${app.otp.resend-cooldown-seconds:60}") int resendCooldownSeconds) {
+            @Value("${app.otp.resend-cooldown-seconds:60}") int resendCooldownSeconds,
+            @Value("${spring.mail.host:}") String mailHost,
+            @Value("${app.mail.from:noreply@stocksense.com}") String mailFrom,
+            @Value("${app.mail.from-name:StockSense Security}") String mailFromName) {
         this.userRepository = userRepository;
         this.otpStore = otpStore;
         this.passwordEncoder = passwordEncoder;
         this.rateLimiter = rateLimiter;
         this.authService = authService;
+        this.mailSenderProvider = mailSenderProvider;
         this.otpValidityMinutes = otpValidityMinutes;
         this.maxOtpAttempts = maxOtpAttempts;
         this.resendCooldownSeconds = resendCooldownSeconds;
+        this.mailHost = mailHost;
+        this.mailFrom = mailFrom;
+        this.mailFromName = mailFromName;
     }
 
     public void generateAndSendOtp(String email, HttpServletRequest request) {
@@ -442,7 +458,7 @@ class OtpService {
         Optional<User> userOpt = userRepository.findByEmail(cleanEmail);
         if (userOpt.isEmpty()) {
             // Mitigate User Enumeration: Return silently without error so attacker cannot determine valid emails
-            logger.info("[AUDIT] OTP_REQUEST_IGNORED | Email not registered: {} | Client IP: {}", cleanEmail, clientIp);
+            logger.info("[AUDIT] OTP_REQUEST_IGNORED | Email not registered: {} | Client IP: {}", maskEmail(cleanEmail), clientIp);
             return;
         }
 
@@ -461,14 +477,82 @@ class OtpService {
 
         otpStore.saveOtp(user.getEmail(), otpHash, expiryDate);
 
-        // Clear terminal notification banner
-        logger.info("\n=======================================================\n"
-                + "[EMAIL OTP NOTIFICATION] To: {}\n"
-                + "Hello {},\n"
-                + "Your StockSense verification code is: {}\n"
-                + "This OTP is valid for {} minutes.\n"
-                + "=======================================================",
-                user.getEmail(), user.getFullName(), rawOtp, otpValidityMinutes);
+        // Dispatch via real SMTP email provider without ever logging the raw OTP to console/logs
+        dispatchOtpEmail(user, rawOtp, clientIp);
+    }
+
+    private void dispatchOtpEmail(User user, String rawOtp, String clientIp) {
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null || mailHost == null || mailHost.isBlank()) {
+            logger.info("[AUDIT] OTP generated for recipient: {} (SMTP provider unconfigured) | Client IP: {}",
+                    maskEmail(user.getEmail()), clientIp);
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(user.getEmail());
+            helper.setFrom(mailFrom, mailFromName);
+            helper.setSubject("StockSense - Password Reset Verification Code");
+
+            String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
+                    .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+                    .logo { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 20px; }
+                    .logo span { color: #2563eb; }
+                    .otp-box { background: #f1f5f9; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0; border: 1px dashed #cbd5e1; }
+                    .otp-code { font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #0f172a; font-family: monospace; }
+                    .footer { margin-top: 32px; font-size: 13px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+                  </style>
+                </head>
+                <body>
+                  <div class="card">
+                    <div class="logo">Stock<span>Sense</span></div>
+                    <p>Hello <strong>%s</strong>,</p>
+                    <p>We received a request to reset your password for your StockSense account. Use the verification code below to proceed:</p>
+                    <div class="otp-box">
+                      <div class="otp-code">%s</div>
+                    </div>
+                    <p>This verification code is valid for <strong>%d minutes</strong>. If you did not request this, you can safely ignore this email.</p>
+                    <div class="footer">
+                      StockSense Intelligent Inventory Management System<br>
+                      Automated Security Dispatch &bull; Do not reply
+                    </div>
+                  </div>
+                </body>
+                </html>
+                """.formatted(user.getFullName(), rawOtp, otpValidityMinutes);
+
+            String text = "Hello " + user.getFullName() + ",\n\n"
+                    + "Your StockSense password reset verification code is: " + rawOtp + "\n\n"
+                    + "This code is valid for " + otpValidityMinutes + " minutes.\n"
+                    + "If you did not request this, please disregard this email.";
+
+            helper.setText(text, html);
+            mailSender.send(message);
+
+            logger.info("[AUDIT] OTP email successfully sent to: {} | Client IP: {}", maskEmail(user.getEmail()), clientIp);
+        } catch (Exception e) {
+            logger.error("[MAIL_ERROR] Failed to send OTP email to {}: {}", maskEmail(user.getEmail()), e.getMessage());
+            throw new RuntimeException("Could not send verification email. Please check SMTP provider configuration.", e);
+        }
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return "***";
+        String[] parts = email.split("@", 2);
+        String name = parts[0];
+        String domain = parts[1];
+        if (name.length() <= 2) {
+            return name.charAt(0) + "***@" + domain;
+        }
+        return name.charAt(0) + "***" + name.charAt(name.length() - 1) + "@" + domain;
     }
 
     public String verifyOtp(String email, String rawOtp) {
