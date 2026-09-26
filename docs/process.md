@@ -40,14 +40,13 @@
         ├── database.py
         ├── models.py
         ├── schemas.py
-        ├── auth.py
+        ├── fetchers.py
         ├── routers/
-        │   ├── auth.py
+        │   ├── dashboard.py
         │   ├── products.py
         │   ├── warehouses.py
         │   ├── operations.py
-        │   ├── moves.py
-        │   └── dashboard.py
+        │   └── moves.py
         └── main.py
 
 ## Step 5: dataset analysis and mock field enrichment
@@ -78,15 +77,17 @@
 Created SQLAlchemy models in `app/models.py` for all 8 database tables:
 
 1. **`users`**
-   - `id` (Integer, Primary Key)
-   - `user_id` (String, Unique, e.g. USR-001)
-   - `name` (String)
+   - `id` (BigInteger, Primary Key)
+   - `username` (String, Unique)
    - `email` (String, Unique)
-   - `password_hash` (String)
-   - `role` (String: Admin, Inventory Manager, Warehouse Staff)
-   - `reset_otp` (String, Nullable)
-   - `otp_expiry` (DateTime, Nullable)
+   - `password` (String)
+   - `full_name` (String)
+   - `enabled` (Boolean)
+   - `account_non_locked` (Boolean)
+   - `failed_login_attempts` (Integer)
+   - `lock_time` (DateTime)
    - `created_at` (DateTime)
+   - `updated_at` (DateTime)
 
 2. **`warehouses`**
    - `id` (Integer, Primary Key)
@@ -180,4 +181,44 @@ Created SQLAlchemy models in `app/models.py` for all 8 database tables:
         - Internal Transfers: 80 seeded
         - Stock Adjustments: 50 seeded
         - Stock Ledger (Move History): 370 seeded
+
+## Step 9: API routers implementation and verification
+
+- Implemented 5 dedicated API routers in `app/routers/`:
+        - `dashboard.py`: Live KPIs, low stock alerts, recent activity
+        - `products.py`: Complete CRUD, search, category filters, stock levels
+        - `warehouses.py`: Master warehouse list & location dropdowns
+        - `operations.py`: Full Receipts, Deliveries, Transfers, and Adjustments engine with stock validation & move ledger logging
+        - `moves.py`: Immutable stock movement audit trail
+- Mounted routers in `app/main.py` with CORS middleware.
+- Verified all 39 API endpoints with 100% test pass rate.
+
+## Step 10: Prometheus & Grafana observability stack
+
+- Installed `prometheus-client` dependency in backend:
+        uv add prometheus-client
+
+- Created `backend/app/metrics.py` defining:
+        - HTTP Telemetry: `stocksense_http_requests_total` (by method, route, status code) and `stocksense_http_request_duration_seconds` (p50/p95/p99 latency histograms).
+        - Real-Time Business & Inventory Gauges:
+            - `stocksense_total_products`
+            - `stocksense_total_stock_units`
+            - `stocksense_low_stock_products`
+            - `stocksense_out_of_stock_products`
+            - `stocksense_pending_receipts`
+            - `stocksense_pending_deliveries`
+            - `stocksense_pending_transfers`
+            - `stocksense_total_warehouses`
+            - `stocksense_inventory_moves_total`
+
+- Added `GET /metrics` and HTTP telemetry middleware in `backend/app/main.py`.
+
+- Built standalone native monitoring architecture in `backend/monitoring/`:
+        - `prometheus/prometheus.yml`: Scraper targeting `localhost:8000/metrics`.
+        - `prometheus/prometheus.exe`: Standalone Prometheus v2.54 binary for Windows.
+        - `grafana/bin/grafana-server.exe`: Standalone Grafana v11.2 server binary for Windows.
+        - `grafana/dashboards/stocksense_dashboard.json`: Pre-built Grafana dashboard visualizing API throughput, error rates, latency quantiles, inventory health, and low-stock alerts.
+        - `start_prometheus.bat` & `start_grafana.bat`: Double-click batch runners.
+        - `setup_prometheus.py` & `setup_grafana.py`: Automated installer utilities.
+
 

@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.routers.dashboard import router as dashboard_router
 from app.routers.products import router as products_router
 from app.routers.warehouses import router as warehouses_router
 from app.routers.operations import router as operations_router
 from app.routers.moves import router as moves_router
+from app.metrics import prometheus_middleware, metrics_endpoint
 
 app = FastAPI(
     title="StockSense Inventory API",
@@ -21,16 +23,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.middleware("http")(prometheus_middleware)
+
 app.include_router(dashboard_router)
 app.include_router(products_router)
 app.include_router(warehouses_router)
 app.include_router(operations_router)
 app.include_router(moves_router)
 
+@app.get("/metrics", tags=["Monitoring"])
+def get_metrics():
+    """Prometheus metrics endpoint."""
+    return metrics_endpoint()
+
 @app.get("/")
 def root():
     return {
         "app": "StockSense Inventory API",
         "status": "online",
-        "docs_url": "/docs"
+        "docs_url": "/docs",
+        "metrics_url": "/metrics"
     }

@@ -9,6 +9,7 @@ dependencies = [
     "docker>=7.2.0",
     "fastapi>=0.141.1",
     "httpx2>=2.13.1",
+    "prometheus-client>=0.26.0",
     "psycopg2-binary>=2.9.13",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.15.0",
