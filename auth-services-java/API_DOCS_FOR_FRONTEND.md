@@ -1,6 +1,6 @@
 # StockSense Authentication Service - Frontend API Contract
 
-This backend microservice handles all authentication, user identity, OTP password reset lifecycle, and session management for the StockSense Inventory Management System.
+This backend microservice handles user registration, authentication, 3-step OTP password recovery, session verification, and token generation for the StockSense Inventory Management System.
 
 All requests accept and return `application/json`.
 
@@ -10,7 +10,7 @@ All requests accept and return `application/json`.
 
 ## 1. Sign Up (Register)
 
-Create a new user account. Upon successful signup, tokens and user details are returned along with the target Inventory Dashboard URL.
+Creates a new warehouse user account and automatically returns the JWT bearer token and redirection URL to the Python Inventory Dashboard.
 
 - **URL**: `/register`
 - **Method**: `POST`
@@ -25,26 +25,30 @@ Create a new user account. Upon successful signup, tokens and user details are r
   "fullName": "Alex Mercer"
 }
 ```
-*Password requirements: Minimum 8 characters, at least 1 uppercase letter, 1 lowercase letter, 1 number, and 1 special symbol.*
+*Validation Rules:*
+- `username`: 3–64 characters, unique
+- `email`: Valid RFC 5322 email format, unique
+- `password`: Minimum 8 characters, at least 1 uppercase, 1 lowercase, 1 number, and 1 special symbol
+- `fullName`: Required, 2–128 characters
 
-### Response (201 Created):
+### Response (`201 Created`):
 ```json
 {
   "success": true,
   "message": "Account registered successfully.",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "tokenType": "Bearer",
     "expiresIn": 86400,
-    "redirectUrl": "http://localhost:8000/dashboard",
+    "dashboardUrl": "http://localhost:8000/dashboard",
     "user": {
       "id": 1,
       "username": "warehouse_staff",
       "email": "staff@stocksense.com",
-      "fullName": "Alex Mercer"
+      "fullName": "Alex Mercer",
+      "createdAt": "2026-09-26T12:00:00"
     }
   },
-  "timestamp": "2026-09-26T12:00:00Z"
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
 
@@ -52,7 +56,7 @@ Create a new user account. Upon successful signup, tokens and user details are r
 
 ## 2. Sign In (Login)
 
-Authenticate with either username or email.
+Authenticates user credentials (accepts either `username` or `email`).
 
 - **URL**: `/login`
 - **Method**: `POST`
@@ -66,39 +70,51 @@ Authenticate with either username or email.
 }
 ```
 
-### Response (200 OK):
+### Response (`200 OK`):
 ```json
 {
   "success": true,
   "message": "Login successful.",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "tokenType": "Bearer",
     "expiresIn": 86400,
-    "redirectUrl": "http://localhost:8000/dashboard",
+    "dashboardUrl": "http://localhost:8000/dashboard",
     "user": {
       "id": 1,
       "username": "warehouse_staff",
       "email": "staff@stocksense.com",
-      "fullName": "Alex Mercer"
+      "fullName": "Alex Mercer",
+      "createdAt": "2026-09-26T12:00:00"
     }
   },
-  "timestamp": "2026-09-26T12:00:00Z"
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
 
-> **Frontend Redirection**: Upon receiving `200 OK`, store `accessToken` (e.g. in Memory or Secure Storage) and redirect the user's browser to `data.redirectUrl` (default: `http://localhost:8000/dashboard`).
+> **Frontend Redirection:** Upon receiving `200 OK`, store `data.token` (in `localStorage` or state) and redirect the browser to `data.dashboardUrl` (default: `http://localhost:8000/dashboard`).
 
-### Brute Force Protection:
-- 5 consecutive failed login attempts will lock the account for 15 minutes.
-- The user can unlock their account immediately by performing an OTP-based password reset.
+### Brute-Force & Lockout Policy:
+- 5 consecutive failed login attempts lock the account for 15 minutes (`HTTP 423 Locked`).
+- Failed attempts decrement the remaining attempt counter returned in the error message.
+- Users can unlock their account immediately by completing the OTP password reset flow.
 
 ---
 
-## 3. OTP-Based Password Reset (3-Step Flow)
+## 3. OTP-Based Password Recovery (3-Step Lifecycle)
 
-### Step 3.1: Request OTP
-Dispatches a 6-digit numeric OTP to the user's email address.
+```
+[User enters Email] ──► Step 1: POST /forgot-password
+                                 │ (User receives 6-digit OTP code)
+                                 ▼
+[User inputs 6-digit OTP] ──► Step 2: POST /verify-otp
+                                 │ (Server validates & returns resetToken)
+                                 ▼
+[User sets New Password] ──► Step 3: POST /reset-password
+                                 │ (Password updated, redirects to login)
+```
+
+### Step 3.1: Request OTP (`/forgot-password`)
+Dispatches a 6-digit numeric verification OTP code to the registered email address.
 
 - **URL**: `/forgot-password`
 - **Method**: `POST`
@@ -110,21 +126,21 @@ Dispatches a 6-digit numeric OTP to the user's email address.
 }
 ```
 
-#### Response (200 OK):
+#### Response (`200 OK`):
 ```json
 {
   "success": true,
-  "message": "OTP has been sent to your registered email address.",
+  "message": "OTP verification code has been dispatched to your email address.",
   "data": null,
-  "timestamp": "2026-09-26T12:00:00Z"
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
 *(Rate limit: 60-second cooldown between consecutive OTP requests for the same email).*
 
 ---
 
-### Step 3.2: Verify OTP
-The user enters the 6-digit OTP code received in email. The server returns a one-time `resetToken` (valid for 5 minutes).
+### Step 3.2: Verify OTP (`/verify-otp`)
+The user inputs the 6-digit numeric OTP code. The server returns a one-time cryptographic `resetToken` (valid for 5 minutes).
 
 - **URL**: `/verify-otp`
 - **Method**: `POST`
@@ -133,28 +149,28 @@ The user enters the 6-digit OTP code received in email. The server returns a one
 ```json
 {
   "email": "staff@stocksense.com",
-  "otp": "535057"
+  "otp": "123456"
 }
 ```
 
-#### Response (200 OK):
+#### Response (`200 OK`):
 ```json
 {
   "success": true,
   "message": "OTP verified successfully. You may now reset your password.",
   "data": {
-    "resetToken": "a3f89e4c8b21...982a",
+    "resetToken": "a3f89e4c8b2167d4...982a",
     "email": "staff@stocksense.com"
   },
-  "timestamp": "2026-09-26T12:00:00Z"
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
-*(Security policy: Max 3 failed attempts before OTP is permanently revoked).*
+*(Security policy: Maximum 3 failed attempts before OTP is invalidated).*
 
 ---
 
-### Step 3.3: Set New Password
-Submit the new password along with the `resetToken`.
+### Step 3.3: Set New Password (`/reset-password`)
+Submit the new password along with the verified `resetToken`.
 
 - **URL**: `/reset-password`
 - **Method**: `POST`
@@ -163,87 +179,89 @@ Submit the new password along with the `resetToken`.
 ```json
 {
   "email": "staff@stocksense.com",
-  "resetToken": "a3f89e4c8b21...982a",
-  "newPassword": "NewPassword123!"
+  "resetToken": "a3f89e4c8b2167d4...982a",
+  "newPassword": "NewSecurePassword123!"
 }
 ```
 
-#### Response (200 OK):
+#### Response (`200 OK`):
 ```json
 {
   "success": true,
   "message": "Password reset successfully. Please log in with your new password.",
   "data": null,
-  "timestamp": "2026-09-26T12:00:00Z"
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
-*(All active refresh tokens across all sessions are automatically revoked).*
 
 ---
 
-## 4. Refresh Token (Token Rotation)
+## 4. Current User Profile (`/me`)
 
-Exchange an existing refresh token for a fresh short-lived access token and a newly rotated refresh token.
+Retrieve authenticated profile information using the JWT Bearer token.
 
-- **URL**: `/refresh`
-- **Method**: `POST`
-- **Public**: Yes
+- **URL**: `/me`
+- **Method**: `GET`
+- **Headers**: `Authorization: Bearer <token>`
 
-```json
-{
-  "refreshToken": "4x9Abc...78=="
-}
-```
-
-#### Response (200 OK):
+#### Response (`200 OK`):
 ```json
 {
   "success": true,
-  "message": "Token refreshed successfully.",
+  "message": "User profile retrieved successfully.",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "newRotatedToken...==",
-    "tokenType": "Bearer",
-    "expiresIn": 900,
-    "redirectUrl": "http://localhost:8000/dashboard",
-    "user": { ... }
-  }
+    "id": 1,
+    "username": "warehouse_staff",
+    "email": "staff@stocksense.com",
+    "fullName": "Alex Mercer",
+    "createdAt": "2026-09-26T12:00:00"
+  },
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
 
 ---
 
-## 5. Logout
+## 5. Logout (`/logout`)
+
+Stateless logout signal. Frontend removes token from client storage.
 
 - **URL**: `/logout`
 - **Method**: `POST`
 - **Public**: Yes
 
+#### Response (`200 OK`):
 ```json
 {
-  "refreshToken": "newRotatedToken...=="
+  "success": true,
+  "message": "Logged out successfully.",
+  "data": null,
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
 
 ---
 
-## 6. Current User Profile
+## 6. Service Health (`/health`)
 
-- **URL**: `/me`
+Ping to verify microservice status and operational engines.
+
+- **URL**: `/health`
 - **Method**: `GET`
-- **Header**: `Authorization: Bearer <accessToken>`
+- **Public**: Yes
 
-#### Response (200 OK):
+#### Response (`200 OK`):
 ```json
 {
   "success": true,
-  "message": "Profile retrieved.",
+  "message": "StockSense Auth Service is operational.",
   "data": {
-    "id": 1,
-    "username": "warehouse_staff",
-    "email": "staff@stocksense.com",
-    "fullName": "Alex Mercer"
-  }
+    "service": "StockSense Auth Service (Java 21 / Spring Boot)",
+    "status": "UP",
+    "integrationTarget": "Python Inventory Management Backend",
+    "securityEngine": "HMAC-SHA256 / BCrypt(12)"
+  },
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
 
@@ -251,16 +269,26 @@ Exchange an existing refresh token for a fresh short-lived access token and a ne
 
 ## Standard Error Format
 
-All error responses return structured JSON:
+All error responses follow this predictable contract:
 
+```json
+{
+  "success": false,
+  "message": "Invalid credentials. 4 attempt(s) remaining.",
+  "data": null,
+  "timestamp": "2026-09-26T12:00:00"
+}
+```
+
+For validation errors (`HTTP 400 Bad Request`), `data` provides per-field errors:
 ```json
 {
   "success": false,
   "message": "Validation failed",
   "data": {
-    "email": "Email must be valid",
-    "password": "Password must contain at least 8 characters..."
+    "email": "Invalid email format",
+    "password": "Password must be at least 8 characters"
   },
-  "timestamp": "2026-09-26T12:00:00Z"
+  "timestamp": "2026-09-26T12:00:00"
 }
 ```
