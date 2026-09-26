@@ -1,4 +1,4 @@
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_URL || 'http://35.206.93.73:8081/api/v1/auth'
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_URL || 'http://localhost:8081/api/v1/auth'
 
 async function post(path, payload) {
   let response

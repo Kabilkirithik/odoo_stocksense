@@ -1,0 +1,58 @@
+version: '3.8'
+
+# Spins up PostgreSQL, Prometheus, and Grafana locally.
+# Auth service, backend, and frontend all run natively on the host.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: stocksense_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: stocksense_db
+    volumes:
+      - stocksense_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d stocksense_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: stocksense_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./backend/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: stocksense_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DATASOURCES_DEFAULT_TYPE=prometheus
+      - GF_DATASOURCES_DEFAULT_URL=http://prometheus:9090
+    volumes:
+      - stocksense_grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  stocksense_pgdata:
+    driver: local
+  stocksense_grafana_data:
+    driver: local
