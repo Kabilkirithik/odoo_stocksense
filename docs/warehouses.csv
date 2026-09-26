@@ -1,0 +1,4 @@
+warehouse_id,warehouse_name,city,capacity
+WH-001,Main Central Warehouse,Chicago,50000
+WH-002,East Distribution Center,New York,35000
+WH-003,North Cold Storage Hub,Minneapolis,20000

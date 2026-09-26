@@ -1,0 +1,5 @@
+user_id,name,email,password_hash,role
+USR-001,nivi,nivi@stocksense.com,e5ce1093960377c44fcf5cd9deb3e0f1e79865ce451739ddd361a34d0682ad48,Admin
+USR-002,Manager,manager@stocksense.com,e8392925a98c9c22795d1fc5d0dfee5b9a6943f6b768ec5a2a0c077e5ed119cf,Inventory Manager
+USR-003,Staff1,staff1@stocksense.com,dfd48f36338aa36228ebb9e204bba6b4e18db0b623e25c458901edc831fb18e9,Warehouse Staff
+USR-004,Staff2,staff2@stocksense.com,dfd48f36338aa36228ebb9e204bba6b4e18db0b623e25c458901edc831fb18e9,Warehouse Staff

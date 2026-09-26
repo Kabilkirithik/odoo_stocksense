@@ -1,0 +1,51 @@
+adjustment_id,product_id,recorded_quantity,counted_quantity,adjustment_reason,adjustment_date
+ADJ-2026001,82-041-7211,49,44,Physical count discrepancy,4/24/2026
+ADJ-2026002,73-401-5721,46,47,Routine cycle count correction,5/9/2026
+ADJ-2026003,91-105-7317,85,83,Expired batch write-off,8/7/2026
+ADJ-2026004,87-762-1317,45,47,Found unaccounted inventory,6/7/2026
+ADJ-2026005,22-141-9798,47,49,Damaged goods during transit,9/28/2026
+ADJ-2026006,49-891-4927,37,35,Physical count discrepancy,8/16/2026
+ADJ-2026007,15-907-3681,20,18,Routine cycle count correction,4/3/2026
+ADJ-2026008,51-572-5497,15,17,Expired batch write-off,7/27/2026
+ADJ-2026009,71-085-4290,31,29,Found unaccounted inventory,4/1/2026
+ADJ-2026010,12-998-3882,76,74,Damaged goods during transit,5/21/2026
+ADJ-2026011,53-080-8252,30,28,Physical count discrepancy,5/24/2026
+ADJ-2026012,38-822-8005,47,46,Routine cycle count correction,8/23/2026
+ADJ-2026013,79-400-6216,16,15,Expired batch write-off,8/1/2026
+ADJ-2026014,85-440-3667,68,63,Found unaccounted inventory,4/23/2026
+ADJ-2026015,28-008-2951,95,92,Damaged goods during transit,8/2/2026
+ADJ-2026016,30-591-7275,17,21,Physical count discrepancy,6/19/2026
+ADJ-2026017,60-771-0879,89,90,Routine cycle count correction,5/14/2026
+ADJ-2026018,42-141-5718,100,97,Expired batch write-off,4/10/2026
+ADJ-2026019,86-330-0214,36,34,Found unaccounted inventory,4/12/2026
+ADJ-2026020,71-999-2404,58,55,Damaged goods during transit,9/8/2026
+ADJ-2026021,49-919-8798,64,66,Physical count discrepancy,4/12/2026
+ADJ-2026022,27-881-1177,34,38,Routine cycle count correction,8/28/2026
+ADJ-2026023,29-875-6900,45,44,Expired batch write-off,8/24/2026
+ADJ-2026024,99-420-3592,22,19,Found unaccounted inventory,5/28/2026
+ADJ-2026025,88-951-9038,11,8,Damaged goods during transit,5/14/2026
+ADJ-2026026,99-033-5661,42,37,Physical count discrepancy,5/24/2026
+ADJ-2026027,43-153-8268,75,73,Routine cycle count correction,7/26/2026
+ADJ-2026028,95-357-2870,86,88,Expired batch write-off,9/26/2026
+ADJ-2026029,22-329-7791,53,50,Found unaccounted inventory,6/6/2026
+ADJ-2026030,38-555-9147,62,66,Damaged goods during transit,9/4/2026
+ADJ-2026031,94-528-8088,43,42,Physical count discrepancy,4/28/2026
+ADJ-2026032,17-253-5688,39,38,Routine cycle count correction,5/7/2026
+ADJ-2026033,37-567-3218,37,41,Expired batch write-off,7/12/2026
+ADJ-2026034,15-562-3712,33,31,Found unaccounted inventory,5/8/2026
+ADJ-2026035,91-417-0366,25,20,Damaged goods during transit,9/7/2026
+ADJ-2026036,65-674-6076,78,77,Physical count discrepancy,6/9/2026
+ADJ-2026037,74-404-0582,57,61,Routine cycle count correction,4/25/2026
+ADJ-2026038,93-218-8108,74,72,Expired batch write-off,6/21/2026
+ADJ-2026039,40-902-1995,46,47,Found unaccounted inventory,7/22/2026
+ADJ-2026040,19-854-3663,13,17,Damaged goods during transit,8/11/2026
+ADJ-2026041,03-940-0630,23,18,Physical count discrepancy,4/9/2026
+ADJ-2026042,36-383-3677,32,29,Routine cycle count correction,8/9/2026
+ADJ-2026043,10-617-7581,24,19,Expired batch write-off,4/20/2026
+ADJ-2026044,92-152-5820,18,17,Found unaccounted inventory,6/24/2026
+ADJ-2026045,68-977-6854,90,94,Damaged goods during transit,6/14/2026
+ADJ-2026046,92-362-3567,11,12,Physical count discrepancy,8/4/2026
+ADJ-2026047,85-781-5386,78,77,Routine cycle count correction,8/7/2026
+ADJ-2026048,24-228-6840,27,25,Expired batch write-off,4/23/2026
+ADJ-2026049,99-048-8310,32,31,Found unaccounted inventory,4/17/2026
+ADJ-2026050,83-568-3475,35,39,Damaged goods during transit,8/22/2026
