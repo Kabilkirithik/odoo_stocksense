@@ -1,9 +1,4 @@
 README.md
-.venv/
-.env
-__pycache__/
-.DS_Store
-# Environment
 .env
 !.env.example
 
