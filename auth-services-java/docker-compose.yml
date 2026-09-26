@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  stocksense-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: stocksense-auth-service:latest
+    container_name: stocksense-auth-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      # Option 1: If connecting to PostgreSQL running on the host machine:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5433/stocksense_auth
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-postgres}
+      
+      # JWT Production Secret (Set via .env or CLI environment)
+      - JWT_SECRET=${JWT_SECRET:-StockSenseProductionSecureSecretKeyMinimum256BitsLongForHmacSha256!}
+      - JWT_EXPIRATION_SECONDS=86400
+      
+      # Integration URLs
+      - INVENTORY_DASHBOARD_URL=http://localhost:8000/dashboard
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8000
+    
+    # Enables connecting to host machine services (PostgreSQL on port 5433)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/api/v1/auth/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

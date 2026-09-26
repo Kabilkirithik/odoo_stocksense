@@ -33,10 +33,9 @@ Create a new user account. Upon successful signup, tokens and user details are r
   "success": true,
   "message": "Account registered successfully.",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "4x9Abc...78==",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "tokenType": "Bearer",
-    "expiresIn": 900,
+    "expiresIn": 86400,
     "redirectUrl": "http://localhost:8000/dashboard",
     "user": {
       "id": 1,
@@ -73,10 +72,9 @@ Authenticate with either username or email.
   "success": true,
   "message": "Login successful.",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "4x9Abc...78==",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "tokenType": "Bearer",
-    "expiresIn": 900,
+    "expiresIn": 86400,
     "redirectUrl": "http://localhost:8000/dashboard",
     "user": {
       "id": 1,
