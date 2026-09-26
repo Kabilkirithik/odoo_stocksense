@@ -1,46 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
+import { api } from '../api'
 
 function Location() {
-  const [location, setLocation] = useState({ name: '', shortCode: '', warehouse: '' })
-  const warehouseOptions = ['WH - Main Warehouse']
+  const [locations, setLocations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const handleChange = (field, value) => {
-    setLocation((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSave = () => {
-    console.log('Location saved:', location)
-  }
+  useEffect(() => {
+    api
+      .get('/api/warehouses/locations')
+      .then((data) => {
+        setLocations(data.locations || [])
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
 
   return (
     <div style={styles.page}>
       <Navbar />
       <div style={styles.content}>
         <div style={styles.card}>
-          <h2 style={styles.title}>Location</h2>
+          <h2 style={styles.title}>Locations</h2>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Name</label>
-            <input style={styles.input} value={location.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="e.g. Rack A, Production Floor" />
-          </div>
+          {error && <p style={styles.error}>Failed to load locations: {error}</p>}
+          {loading && <p style={styles.loading}>Loading...</p>}
 
-          <div style={styles.field}>
-            <label style={styles.label}>Short Code</label>
-            <input style={styles.input} value={location.shortCode} onChange={(e) => handleChange('shortCode', e.target.value)} placeholder="e.g. Stock1" />
-          </div>
+          {!loading && !error && (
+            <ul style={styles.list}>
+              {locations.map((loc) => (
+                <li key={loc} style={styles.listItem}>{loc}</li>
+              ))}
+              {locations.length === 0 && <li style={styles.listItem}>No locations found.</li>}
+            </ul>
+          )}
 
-          <div style={styles.field}>
-            <label style={styles.label}>Warehouse</label>
-            <select style={styles.input} value={location.warehouse} onChange={(e) => handleChange('warehouse', e.target.value)}>
-              <option value="">Select warehouse</option>
-              {warehouseOptions.map((w) => <option key={w} value={w}>{w}</option>)}
-            </select>
-          </div>
-
-          <p style={styles.note}>This holds the multiple locations of a warehouse, rooms, racks, etc.</p>
-
-          <button style={styles.saveButton} onClick={handleSave}>Save</button>
+          <p style={styles.note}>
+            This holds the multiple locations of a warehouse, rooms, racks, etc.
+            Note: location creation isn't part of the current API — this is a read-only list.
+          </p>
         </div>
       </div>
     </div>
@@ -52,11 +54,11 @@ const styles = {
   content: { padding: '30px' },
   card: { backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', padding: '25px', maxWidth: '500px' },
   title: { marginTop: 0, marginBottom: '20px' },
-  field: { display: 'flex', flexDirection: 'column', marginBottom: '15px' },
-  label: { fontSize: '13px', color: '#555', marginBottom: '5px' },
-  input: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' },
-  note: { fontSize: '13px', color: '#888', marginBottom: '15px' },
-  saveButton: { marginTop: '10px', padding: '8px 20px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' },
+  loading: { color: '#888', fontSize: '14px' },
+  error: { color: '#dc2626', fontSize: '14px', marginBottom: '15px' },
+  list: { listStyle: 'none', padding: 0, margin: 0 },
+  listItem: { padding: '8px 0', borderBottom: '1px solid #eee', fontSize: '14px' },
+  note: { fontSize: '13px', color: '#888', marginTop: '15px' },
 }
 
 export default Location

@@ -1,41 +1,63 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '../components/Navbar'
+import { api } from '../api'
 
 function Warehouse() {
-  const [warehouse, setWarehouse] = useState({ name: '', shortCode: '', address: '' })
+  const [warehouses, setWarehouses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const handleChange = (field, value) => {
-    setWarehouse((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleSave = () => {
-    console.log('Warehouse saved:', warehouse)
-  }
+  useEffect(() => {
+    api
+      .get('/api/warehouses')
+      .then((data) => {
+        setWarehouses(data.items || data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
 
   return (
     <div style={styles.page}>
       <Navbar />
       <div style={styles.content}>
-        <div style={styles.card}>
-          <h2 style={styles.title}>Warehouse</h2>
+        <h2 style={styles.title}>Warehouse</h2>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Name</label>
-            <input style={styles.input} value={warehouse.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="e.g. Main Warehouse" />
-          </div>
+        {error && <p style={styles.error}>Failed to load warehouses: {error}</p>}
+        {loading && <p style={styles.loading}>Loading...</p>}
 
-          <div style={styles.field}>
-            <label style={styles.label}>Short Code</label>
-            <input style={styles.input} value={warehouse.shortCode} onChange={(e) => handleChange('shortCode', e.target.value)} placeholder="e.g. WH" />
-          </div>
+        {!loading && !error && (
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Warehouse ID</th>
+                <th style={styles.th}>Name</th>
+                <th style={styles.th}>City</th>
+                <th style={styles.th}>Capacity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {warehouses.map((w) => (
+                <tr key={w.warehouse_id}>
+                  <td style={styles.td}>{w.warehouse_id}</td>
+                  <td style={styles.td}>{w.warehouse_name}</td>
+                  <td style={styles.td}>{w.city}</td>
+                  <td style={styles.td}>{w.capacity}</td>
+                </tr>
+              ))}
+              {warehouses.length === 0 && (
+                <tr><td style={styles.td} colSpan={4}>No warehouses found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
 
-          <div style={styles.field}>
-            <label style={styles.label}>Address</label>
-            <textarea style={styles.textarea} value={warehouse.address} onChange={(e) => handleChange('address', e.target.value)} placeholder="Enter warehouse address" rows={4} />
-          </div>
-
-          <button style={styles.saveButton} onClick={handleSave}>Save</button>
-        </div>
+        <p style={styles.note}>
+          Note: warehouse creation isn't part of the current API — this is a read-only list.
+        </p>
       </div>
     </div>
   )
@@ -44,13 +66,13 @@ function Warehouse() {
 const styles = {
   page: { minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'Arial, sans-serif' },
   content: { padding: '30px' },
-  card: { backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', padding: '25px', maxWidth: '500px' },
-  title: { marginTop: 0, marginBottom: '20px' },
-  field: { display: 'flex', flexDirection: 'column', marginBottom: '15px' },
-  label: { fontSize: '13px', color: '#555', marginBottom: '5px' },
-  input: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' },
-  textarea: { padding: '8px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px', fontFamily: 'Arial, sans-serif', resize: 'vertical' },
-  saveButton: { marginTop: '10px', padding: '8px 20px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' },
+  title: { marginBottom: '20px' },
+  loading: { color: '#888', fontSize: '14px' },
+  error: { color: '#dc2626', fontSize: '14px', marginBottom: '15px' },
+  table: { width: '100%', maxWidth: '700px', borderCollapse: 'collapse', backgroundColor: '#fff', border: '1px solid #ddd' },
+  th: { textAlign: 'left', padding: '10px', borderBottom: '2px solid #ddd', fontSize: '14px', backgroundColor: '#fafafa' },
+  td: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '14px' },
+  note: { marginTop: '15px', fontSize: '13px', color: '#888' },
 }
 
 export default Warehouse

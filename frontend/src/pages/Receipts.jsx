@@ -1,19 +1,38 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { api } from '../api'
 
 function Receipts() {
   const [search, setSearch] = useState('')
+  const [receipts, setReceipts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
-  const receipts = [
-    { id: 1, reference: 'WH/IN/0001', from: 'vendor', to: 'WH/Stock1', contact: 'Acura Interior', scheduleDate: '12/1/2001', status: 'Ready' },
-    { id: 2, reference: 'WH/IN/0002', from: 'vendor', to: 'WH/Stock1', contact: 'Acura Interior', scheduleDate: '12/1/2001', status: 'Ready' },
-  ]
+  useEffect(() => {
+    fetchReceipts()
+  }, [])
 
-  const filteredReceipts = receipts.filter(
-    (r) => r.reference.toLowerCase().includes(search.toLowerCase()) || r.contact.toLowerCase().includes(search.toLowerCase())
-  )
+  const fetchReceipts = () => {
+    setLoading(true)
+    const query = search ? `?search=${encodeURIComponent(search)}` : ''
+    api
+      .get(`/api/operations/receipts${query}`)
+      .then((data) => {
+        setReceipts(data.items || data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault()
+    fetchReceipts()
+  }
 
   return (
     <div style={styles.page}>
@@ -22,37 +41,51 @@ function Receipts() {
         <div style={styles.headerRow}>
           <button style={styles.newButton} onClick={() => navigate('/receipts/new')}>New</button>
           <h2 style={styles.title}>Receipts</h2>
-          <div style={styles.searchArea}>
-            <input type="text" placeholder="Search by reference or contact" value={search} onChange={(e) => setSearch(e.target.value)} style={styles.searchInput} />
-            <button style={styles.iconButton} title="List View">☰</button>
-            <button style={styles.iconButton} title="Kanban View">▦</button>
-          </div>
+
+          <form style={styles.searchArea} onSubmit={handleSearchSubmit}>
+            <input
+              type="text"
+              placeholder="Search by reference or supplier"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={styles.searchInput}
+            />
+            <button type="submit" style={styles.iconButton} title="Search">🔍</button>
+          </form>
         </div>
 
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Reference</th>
-              <th style={styles.th}>From</th>
-              <th style={styles.th}>To</th>
-              <th style={styles.th}>Contact</th>
-              <th style={styles.th}>Schedule Date</th>
-              <th style={styles.th}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredReceipts.map((r) => (
-              <tr key={r.id} style={styles.rowHover} onClick={() => navigate(`/receipts/${r.id}`)}>
-                <td style={styles.td}>{r.reference}</td>
-                <td style={styles.td}>{r.from}</td>
-                <td style={styles.td}>{r.to}</td>
-                <td style={styles.td}>{r.contact}</td>
-                <td style={styles.td}>{r.scheduleDate}</td>
-                <td style={styles.td}><span style={styles.statusBadge}>{r.status}</span></td>
+        {error && <p style={styles.error}>Failed to load receipts: {error}</p>}
+        {loading && <p style={styles.loading}>Loading...</p>}
+
+        {!loading && !error && (
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Reference</th>
+                <th style={styles.th}>Supplier</th>
+                <th style={styles.th}>Product</th>
+                <th style={styles.th}>Quantity</th>
+                <th style={styles.th}>Date</th>
+                <th style={styles.th}>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {receipts.map((r) => (
+                <tr key={r.receipt_id} style={styles.rowHover} onClick={() => navigate(`/receipts/${r.receipt_id}`)}>
+                  <td style={styles.td}>{r.receipt_id}</td>
+                  <td style={styles.td}>{r.supplier_id}</td>
+                  <td style={styles.td}>{r.product_id}</td>
+                  <td style={styles.td}>{r.quantity_received}</td>
+                  <td style={styles.td}>{r.receipt_date}</td>
+                  <td style={styles.td}><span style={styles.statusBadge}>{r.status}</span></td>
+                </tr>
+              ))}
+              {receipts.length === 0 && (
+                <tr><td style={styles.td} colSpan={6}>No receipts found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
@@ -67,6 +100,8 @@ const styles = {
   searchArea: { marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' },
   searchInput: { padding: '6px 10px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '13px', width: '220px' },
   iconButton: { padding: '6px 10px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff', cursor: 'pointer', fontSize: '14px' },
+  loading: { color: '#888', fontSize: '14px' },
+  error: { color: '#dc2626', fontSize: '14px', marginBottom: '15px' },
   table: { width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', border: '1px solid #ddd' },
   th: { textAlign: 'left', padding: '10px', borderBottom: '2px solid #ddd', fontSize: '14px', backgroundColor: '#fafafa' },
   td: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '14px' },
